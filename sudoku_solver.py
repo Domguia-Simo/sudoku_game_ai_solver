@@ -1,125 +1,136 @@
-import pygame
-import time
-
-# Initialize Pygame
-pygame.init()
-
-# Constants
-WIDTH, HEIGHT = 540, 600
-ROWS, COLS = 9, 9
-CELL_SIZE = WIDTH // 9
-FONT = pygame.font.SysFont("comicsans", 40)
-DELAY = 50  # milliseconds
-
-# Colors
-WHITE = (255, 255, 255)
-BLACK = (0, 0, 0)
-GREEN = (0, 200, 0)
-RED = (255, 0, 0)
-
-# Sample puzzle (0 = empty)
-board = [
-    [5, 3, 0, 0, 7, 0, 0, 0, 0],
-    [6, 0, 0, 1, 9, 5, 0, 0, 0],
-    [0, 9, 8, 0, 0, 0, 0, 6, 0],
-    [8, 0, 0, 0, 6, 0, 0, 0, 3],
-    [4, 0, 0, 8, 0, 3, 0, 0, 1],
-    [7, 0, 0, 0, 2, 0, 0, 0, 6],
-    [0, 6, 0, 0, 0, 0, 2, 8, 0],
-    [0, 0, 0, 4, 1, 9, 0, 0, 5],
-    [0, 0, 0, 0, 8, 0, 0, 7, 9]
-]
-
-# Create window
-win = pygame.display.set_mode((WIDTH, HEIGHT))
-pygame.display.set_caption("Sudoku Solver AI (Backtracking)")
-
-
-# Drawing Functions
-def draw_grid():
-    for i in range(ROWS + 1):
-        line_width = 4 if i % 3 == 0 else 1
-        pygame.draw.line(win, BLACK, (0, i * CELL_SIZE), (WIDTH, i * CELL_SIZE), line_width)
-        pygame.draw.line(win, BLACK, (i * CELL_SIZE, 0), (i * CELL_SIZE, WIDTH), line_width)
-
-def draw_numbers(board):
-    for i in range(ROWS):
-        for j in range(COLS):
-            if board[i][j] != 0:
-                text = FONT.render(str(board[i][j]), True, BLACK)
-                win.blit(text, (j * CELL_SIZE + 20, i * CELL_SIZE + 10))
-
-def draw_board(board):
-    win.fill(WHITE)
-    draw_grid()
-    draw_numbers(board)
-    pygame.display.update()
-
-
-# Sudoku Logic Functions
-def is_valid(board, row, col, num):
-    for i in range(9):
-        if board[row][i] == num or board[i][col] == num:
-            return False
-    box_x, box_y = col // 3, row // 3
-    for i in range(box_y * 3, box_y * 3 + 3):
-        for j in range(box_x * 3, box_x * 3 + 3):
-            if board[i][j] == num:
-                return False
-    return True
-
-def find_empty(board):
-    for i in range(ROWS):
-        for j in range(COLS):
-            if board[i][j] == 0:
-                return i, j
-    return None
-
-def visualize_solver(board):
-    empty = find_empty(board)
-    if not empty:
-        return True
-
-    row, col = empty
-    for num in range(1, 10):
-        if is_valid(board, row, col, num):
-            board[row][col] = num
-
-            # Visualization
-            draw_board(board)
-            pygame.draw.rect(win, GREEN, (col * CELL_SIZE, row * CELL_SIZE, CELL_SIZE, CELL_SIZE), 3)
-            pygame.display.update()
-            pygame.time.delay(DELAY)
-
-            if visualize_solver(board):
-                return True
-
-            # Backtrack
-            board[row][col] = 0
-            draw_board(board)
-            pygame.draw.rect(win, RED, (col * CELL_SIZE, row * CELL_SIZE, CELL_SIZE, CELL_SIZE), 3)
-            pygame.display.update()
-            pygame.time.delay(DELAY)
-
-    return False
-
-
-# Main Game Loop
-def main():
-    running = True
-    solved = False
-
-    while running:
-        draw_board(board)
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                running = False
-
-            if event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_SPACE and not solved:
-                    visualize_solver(board)
-                    solved = True
-
-    pygame.quit()
-
-main()
+import pygame 
+import time 
+import random 
+import copy 
+pygame.init() 
+WIDTH, HEIGHT = 540, 600 
+WIN = pygame.display.set_mode((WIDTH, HEIGHT)) 
+pygame.display.set_caption("Sudoku with AI Solver") 
+FONT = pygame.font.SysFont("comicsans", 40) 
+SMALL_FONT = pygame.font.SysFont("comicsans", 20) 
+# -------------------- Board Generator -------------------- 
+def generate_board(difficulty="medium"): 
+    # Start with a full board using backtracking 
+    board = [[0] * 9 for _ in range(9)] 
+    fill_board(board) 
+    # Remove elements based on difficulty 
+    level = {"easy": 35, "medium": 45, "hard": 55} 
+    remove = level.get(difficulty, 45) 
+    while remove > 0: 
+            row, col = random.randint(0, 8), random.randint(0, 8) 
+            if board[row][col] != 0: 
+                board[row][col] = 0 
+                remove -= 1 
+    return board 
+ 
+def fill_board(board): 
+    nums = list(range(1, 10)) 
+    for i in range(9): 
+        for j in range(9): 
+            if board[i][j] == 0: 
+                random.shuffle(nums) 
+                for num in nums: 
+                    if valid(board, num, (i, j)): 
+                        board[i][j] = num 
+                        if fill_board(board): 
+                            return True 
+                        board[i][j] = 0 
+                return False 
+    return True 
+ 
+# -------------------- Backtracking Solver -------------------- 
+def valid(board, num, pos): 
+    row, col = pos 
+    # Check row 
+    if any(board[row][i] == num for i in range(9)): 
+        return False 
+    # Check column 
+    if any(board[i][col] == num for i in range(9)): 
+        return False 
+    # Check box 
+    box_x, box_y = col // 3, row // 3 
+    for i in range(box_y*3, box_y*3 + 3): 
+        for j in range(box_x*3, box_x*3 + 3): 
+            if board[i][j] == num: 
+                return False 
+    return True 
+ 
+def solve(board, visualizer=None): 
+    for i in range(9): 
+        for j in range(9): 
+            if board[i][j] == 0: 
+                for num in range(1, 10): 
+                    if valid(board, num, (i, j)): 
+                        board[i][j] = num 
+                        if visualizer: 
+                            visualizer.update(board, i, j, num, "Trying") 
+                        if solve(board, visualizer): 
+                            return True 
+                        board[i][j] = 0 
+                        if visualizer: 
+                            visualizer.update(board, i, j, num, 
+"Backtracking") 
+                return False 
+    return True 
+ 
+# -------------------- Visualization -------------------- 
+class Visualizer: 
+    def __init__(self, board): 
+        self.board = board 
+        self.original = copy.deepcopy(board) 
+ 
+    def draw(self): 
+        WIN.fill((255, 255, 255)) 
+        # Draw grid 
+        for i in range(10): 
+            thickness = 4 if i % 3 == 0 else 1 
+            pygame.draw.line(WIN, (0, 0, 0), (0, i*60), (540, i*60), 
+thickness) 
+            pygame.draw.line(WIN, (0, 0, 0), (i*60, 0), (i*60, 540), 
+thickness) 
+ 
+        # Draw numbers 
+        for i in range(9): 
+            for j in range(9): 
+                num = self.board[i][j] 
+                if num != 0: 
+                    color = (0, 0, 0) if self.original[i][j] != 0 else (0, 
+0, 255) 
+                    text = FONT.render(str(num), True, color) 
+                    WIN.blit(text, (j*60 + 20, i*60 + 15)) 
+ 
+    def update(self, board, row, col, num, action): 
+        self.board = copy.deepcopy(board) 
+        self.draw() 
+        pygame.display.update() 
+        print(f"{action} number {num} at ({row}, {col})") 
+        time.sleep(0.05) 
+ 
+# -------------------- Main Game Loop -------------------- 
+def main(): 
+    difficulty = "medium"  # Change to "easy", "hard" if needed 
+    board = generate_board(difficulty) 
+    visualizer = Visualizer(board) 
+    running = True 
+    solved = False 
+ 
+    while running: 
+        WIN.fill((255, 255, 255)) 
+        visualizer.draw() 
+        pygame.display.update() 
+ 
+        for event in pygame.event.get(): 
+            if event.type == pygame.QUIT: 
+                running = False 
+ 
+        if not solved: 
+            time.sleep(1) 
+            print("Solving started...\n") 
+            solve(board, visualizer) 
+            print("\nSolved successfully!") 
+            solved = True 
+ 
+    pygame.quit() 
+ 
+if __name__ == "__main__": 
+    main()
